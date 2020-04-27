@@ -291,9 +291,11 @@ def safeToFloat(value) {
 
 def wasWetYesterday() {
     
-    def yesterdaysWeather = getWeatherFeature("yesterday", zipcode)
+    def yesterdaysWeather = getTwcConditions()
     log.debug "Yesterday Weather: $yesterdaysWeather"
-    def yesterdaysPrecip = yesterdaysWeather?.history?.dailysummary?.precipi?.toArray() 
+    def todaysPrecip1 = todaysWeather["precip1Hour"] ? safeToFloat(todaysWeather["precip1Hour"]) : 0
+    def todaysPrecip6 = (todaysWeather["precip6Hour"] ? safeToFloat(todaysWeather["precip6Hour"]) : 0) - todaysPrecip1 //2 - 5 hours back
+    def yesterdaysPrecip = (todaysWeather["precip24Hour"] ? safeToFloat(todaysWeather["precip24Hour"]) : 0) - todaysPrecip6 //7 to 24 hours back
     log.debug "Yesterday Precip: $yesterdaysPrecip"
     log.debug "Yesterday inches: $yesterdaysPrecip[0])"
     def yesterdaysInches= yesterdaysPrecip ? safeToFloat(yesterdaysPrecip[0]) : 0
@@ -303,17 +305,17 @@ def wasWetYesterday() {
 
 def isWet() {
 
-    def todaysWeather = getWeatherFeature("conditions", zipcode)
-    def todaysPrecip = (todaysWeather?.current_observation?.precip_today_in)
-    def todaysInches = todaysPrecip ? safeToFloat(todaysPrecip) : 0
+    def todaysWeather = getTwcConditions()
+    def todaysPrecip6 = (todaysWeather["precip6Hour"] ? safeToFloat(todaysWeather["precip6Hour"]) : 0) 
+    def todaysInches = todaysPrecip6
     log.info("Today's precipitation for ${zipcode}: ${todaysInches} in")
     return todaysInches
 }
 
 def isStormy() {
 
-    def forecastWeather = getWeatherFeature("forecast", zipcode)
-    def forecastPrecip=forecastWeather.forecast.simpleforecast.forecastday.qpf_allday.in?.toArray()
+    def forecastWeather = getTwcConditions()
+    def forecastPrecip=forecastWeather["qpf"]
     def forecastInches = forecastPrecip ? safeToFloat(forecastPrecip[0]) : 0
     log.info("Forecast precipitation for $zipcode: $forecastInches in")
     return forecastInches
@@ -321,11 +323,10 @@ def isStormy() {
 
 def isHot() {
 
-    def forecastWeather = getWeatherFeature("forecast", zipcode)
-    def todaysTemps=forecastWeather.forecast.simpleforecast.forecastday.high.fahrenheit?.toArray()
-    def todaysHighTemp = todaysTemps ? safeToFloat(todaysTemps[0]) : 50
-    log.info("Forecast high temperature for $zipcode: $todaysHighTemp F")
-    return todaysHighTemp
+    def forecastWeather = getTwcConditions()
+    def currentTemp = forcastWeather["temperature"] ? safeToFloat(forcastWeather["temperature"]) : 50
+    log.info("Current temperature for $zipcode: $currentTemp F")
+    return currentTemp
 }
 
 //send watering times over to the device handler
